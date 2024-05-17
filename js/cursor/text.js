@@ -21,7 +21,7 @@ jQuery(document).ready(function($) {
       y = e.pageY;
 
     $i.css({
-      "z-index": 99999,
+      "z-index": 9999999999,
       "top": y - 28,
       "left": x - a[a_idx].length * 8,
       "position": "absolute"
